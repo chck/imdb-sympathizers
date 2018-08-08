@@ -2,7 +2,7 @@
 from tensorflow.keras.utils import plot_model
 from tensorflow.python.keras.layers import (
     Dense, Input, InputLayer, Dropout,
-    Embedding, LSTM, Bidirectional, Conv1D, MaxPool1D,
+    Embedding, LSTM, Bidirectional, Conv1D, MaxPool1D, GlobalMaxPool1D, Concatenate,
     Permute, Reshape, Multiply, Flatten, Layer
 )
 from tensorflow.python.keras.models import Model, Sequential
@@ -13,6 +13,8 @@ model_names = [
     'lstm_simple',
     'lstm_simple_dropout',
     'bilstm_dropout',
+    'cnn_maxpool',
+    'cnn_maxpool_multifilter',
     'cnn_bilstm_dropout',
     'cnn_bilstm_attention_dropout',
 ]
@@ -38,12 +40,61 @@ class BaseModel:
             return self._lstm_simple_dropout(name)
         elif name == 'bilstm_dropout':
             return self._bilstm_dropout(name)
+        elif name == 'cnn_maxpool':
+            return self._cnn_maxpool(name)
+        elif name == 'cnn_maxpool_multifilter':
+            return self._cnn_maxpool_multifilter(name)
         elif name == 'cnn_bilstm_dropout':
             return self._cnn_bilstm_dropout(name)
         elif name == 'cnn_bilstm_attention_dropout':
             return self._cnn_bilstm_attention_dropout(name)
         else:
             RuntimeError('Unexpected model name. Specify name in {}'.format(','.join(model_names)))
+
+    def _cnn_maxpool(self, name: str) -> Model:
+        """https://richliao.github.io/supervised/classification/2016/11/26/textclassifier-convolutional/
+        """
+        return Sequential([
+            InputLayer(input_shape=(self.input_dim,), name='input'),
+            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
+            Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu'),
+            MaxPool1D(pool_size=self.conv_pool_size),
+            Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu'),
+            MaxPool1D(pool_size=self.conv_pool_size),
+            Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu'),
+            GlobalMaxPool1D(),
+            Flatten(),
+            Dense(self.units, activation='relu'),
+            Dense(self.classes, activation='sigmoid', name='fc1'),
+        ], name=name)
+
+    def _cnn_maxpool_multifilter(self, name: str) -> Model:
+        """https://richliao.github.io/supervised/classification/2016/11/26/textclassifier-convolutional/
+        """
+        convs = []
+        filter_sizes = [3, 4, 5]
+
+        _inputs = Input((self.input_dim,), name='input')
+        l_embed = Embedding(input_dim=self.input_dim,
+                            output_dim=self.embed_dim,
+                            input_length=self.maxlen,
+                            name='embedding')(_inputs)
+
+        for fsz in filter_sizes:
+            l_conv = Conv1D(filters=self.conv_filters, kernel_size=fsz, activation='relu')(l_embed)
+            l_pool = MaxPool1D(self.conv_pool_size)(l_conv)
+            convs.append(l_pool)
+
+        l_merge = Concatenate(axis=1)(convs)
+        l_cov1 = Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu')(l_merge)
+        l_pool1 = MaxPool1D(pool_size=self.conv_pool_size)(l_cov1)
+        l_cov2 = Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu')(l_pool1)
+        l_pool2 = GlobalMaxPool1D()(l_cov2)
+        l_flat = Flatten()(l_pool2)
+        l_dense = Dense(self.units, activation='relu')(l_flat)
+        _preds = Dense(self.classes, activation='sigmoid', name='fc1')(l_dense)
+
+        return Model(inputs=_inputs, outputs=_preds, name=name)
 
     def _lstm_simple(self, name: str) -> Model:
         return Sequential([
