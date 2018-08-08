@@ -19,8 +19,8 @@ model_names = [
 
 
 class BaseModel:
-    def __init__(self, input_dim: int, embed_dim=128, maxlen=100, units=64,
-                 conv_filters=64, conv_kernel_size=5, conv_pool_size=4,
+    def __init__(self, input_dim: int, embed_dim=128, maxlen=1000, units=128,
+                 conv_filters=128, conv_kernel_size=5, conv_pool_size=5,
                  classes=1):
         self.input_dim = input_dim
         self.embed_dim = embed_dim
