@@ -88,26 +88,26 @@ class BaseModel:
     def _cnn_bilstm_attention_dropout(self, name: str) -> Model:
         """https://qiita.com/fufufukakaka/items/4f9d42a4300392691bf3
         """
-        _input = Input(shape=(self.input_dim,), name='input')
-        _output = Embedding(input_dim=self.input_dim,
+        _inputs = Input(shape=(self.input_dim,), name='input')
+        l_embed = Embedding(input_dim=self.input_dim,
                             output_dim=self.embed_dim,
                             input_length=self.maxlen,
-                            name='embedding')(_input)
-        _output = Dropout(0.2, name='input_dropout')(_output)
-        _output = Conv1D(filters=self.conv_filters,
-                         kernel_size=self.conv_kernel_size,
-                         padding='same',
-                         activation='relu')(_output)
-        _pool_out = MaxPool1D(pool_size=self.conv_pool_size)(_output)
-        _output = Bidirectional(LSTM(units=self.units,
-                                     dropout=0.2,
-                                     recurrent_dropout=0.2,
-                                     return_sequences=True,
-                                     name='bilstm_dropout'))(_pool_out)
-        _output = Flatten()(self.__attention_3d_block(_output, _pool_out.shape[1].value))
-        _output = Dropout(0.5, name='hidden_dropout')(_output)
-        _output = Dense(self.classes, activation='sigmoid', name='fc1')(_output)
-        return Model(inputs=_input, outputs=_output, name=name)
+                            name='embedding')(_inputs)
+        l_drop1 = Dropout(0.2, name='input_dropout')(l_embed)
+        l_cov1 = Conv1D(filters=self.conv_filters,
+                        kernel_size=self.conv_kernel_size,
+                        padding='same',
+                        activation='relu')(l_drop1)
+        l_pool1 = MaxPool1D(pool_size=self.conv_pool_size)(l_cov1)
+        l_bilstm1 = Bidirectional(LSTM(units=self.units,
+                                       dropout=0.2,
+                                       recurrent_dropout=0.2,
+                                       return_sequences=True,
+                                       name='bilstm_dropout'))(l_pool1)
+        l_flat = Flatten()(self.__attention_3d_block(l_bilstm1, l_pool1.shape[1].value))
+        l_drop2 = Dropout(0.5, name='hidden_dropout')(l_flat)
+        _preds = Dense(self.classes, activation='sigmoid', name='fc1')(l_drop2)
+        return Model(inputs=_inputs, outputs=_preds, name=name)
 
     def __attention_3d_block(self, _lstm_output, _time_steps) -> Layer:
         """https://github.com/philipperemy/keras-attention-mechanism/blob/master/attention_lstm.py
