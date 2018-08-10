@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from tensorflow.keras.utils import plot_model
 from tensorflow.python.keras.layers import (
     Dense, Input, InputLayer, Dropout,
     Embedding, LSTM, Bidirectional, Conv1D, MaxPool1D, GlobalMaxPool1D, Concatenate,
     Permute, Reshape, Multiply, Flatten, Layer
 )
 from tensorflow.python.keras.models import Model, Sequential
+from tensorflow.python.keras.utils import plot_model
 
 from trainer.datasets import load_imdb
 
@@ -51,11 +51,39 @@ class BaseModel:
         else:
             RuntimeError('Unexpected model name. Specify name in {}'.format(','.join(model_names)))
 
+    def _lstm_simple(self, name: str) -> Model:
+        return Sequential([
+            InputLayer(input_shape=(self.maxlen,), name='input'),
+            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
+            LSTM(units=self.units, name='lstm'),
+            Dense(self.classes, activation='sigmoid', name='fc1'),
+        ], name=name)
+
+    def _lstm_simple_dropout(self, name: str) -> Model:
+        return Sequential([
+            InputLayer(input_shape=(self.maxlen,), name='input'),
+            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
+            Dropout(0.2, name='input_dropout'),
+            LSTM(units=self.units, name='lstm'),
+            Dropout(0.5, name='hidden_dropout'),
+            Dense(self.classes, activation='sigmoid', name='fc1'),
+        ], name=name)
+
+    def _bilstm_dropout(self, name: str) -> Model:
+        return Sequential([
+            InputLayer(input_shape=(self.maxlen,), name='input'),
+            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
+            Dropout(0.2, name='input_dropout'),
+            Bidirectional(LSTM(units=self.units, name='bilstm')),
+            Dropout(0.5, name='hidden_dropout'),
+            Dense(self.classes, activation='sigmoid', name='fc1'),
+        ], name=name)
+
     def _cnn_maxpool(self, name: str) -> Model:
         """https://richliao.github.io/supervised/classification/2016/11/26/textclassifier-convolutional/
         """
         return Sequential([
-            InputLayer(input_shape=(self.input_dim,), name='input'),
+            InputLayer(input_shape=(self.maxlen,), name='input'),
             Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
             Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, activation='relu'),
             MaxPool1D(pool_size=self.conv_pool_size),
@@ -74,7 +102,7 @@ class BaseModel:
         convs = []
         filter_sizes = [3, 4, 5]
 
-        _inputs = Input((self.input_dim,), name='input')
+        _inputs = Input((self.maxlen,), name='input')
         l_embed = Embedding(input_dim=self.input_dim,
                             output_dim=self.embed_dim,
                             input_length=self.maxlen,
@@ -96,37 +124,9 @@ class BaseModel:
 
         return Model(inputs=_inputs, outputs=_preds, name=name)
 
-    def _lstm_simple(self, name: str) -> Model:
-        return Sequential([
-            InputLayer(input_shape=(self.input_dim,), name='input'),
-            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
-            LSTM(units=self.units, name='lstm'),
-            Dense(self.classes, activation='sigmoid', name='fc1'),
-        ], name=name)
-
-    def _lstm_simple_dropout(self, name: str) -> Model:
-        return Sequential([
-            InputLayer(input_shape=(self.input_dim,), name='input'),
-            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
-            Dropout(0.2, name='input_dropout'),
-            LSTM(units=self.units, name='lstm'),
-            Dropout(0.5, name='hidden_dropout'),
-            Dense(self.classes, activation='sigmoid', name='fc1'),
-        ], name=name)
-
-    def _bilstm_dropout(self, name: str) -> Model:
-        return Sequential([
-            InputLayer(input_shape=(self.input_dim,), name='input'),
-            Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
-            Dropout(0.2, name='input_dropout'),
-            Bidirectional(LSTM(units=self.units, name='bilstm')),
-            Dropout(0.5, name='hidden_dropout'),
-            Dense(self.classes, activation='sigmoid', name='fc1'),
-        ], name=name)
-
     def _cnn_bilstm_dropout(self, name: str) -> Model:
         return Sequential([
-            InputLayer(input_shape=(self.input_dim,), name='input'),
+            InputLayer(input_shape=(self.maxlen,), name='input'),
             Embedding(input_dim=self.input_dim, output_dim=self.embed_dim, input_length=self.maxlen, name='embedding'),
             Dropout(0.2, name='input_dropout'),
             Conv1D(filters=self.conv_filters, kernel_size=self.conv_kernel_size, padding='same', activation='relu'),
@@ -139,7 +139,7 @@ class BaseModel:
     def _cnn_bilstm_attention_dropout(self, name: str) -> Model:
         """https://qiita.com/fufufukakaka/items/4f9d42a4300392691bf3
         """
-        _inputs = Input(shape=(self.input_dim,), name='input')
+        _inputs = Input(shape=(self.maxlen,), name='input')
         l_embed = Embedding(input_dim=self.input_dim,
                             output_dim=self.embed_dim,
                             input_length=self.maxlen,
