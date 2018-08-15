@@ -1,0 +1,8 @@
+# standard_gpu provides 1 GPU. Change to comprex_model_m_gpu for 4 GPUS
+# Reference: https://cloud.google.com/ml-engine/docs/tensorflow/machine-types
+trainingInput:
+  pythonVersion: '3.5'
+  scaleTier: STANDARD_1
+  #scaleTier: CUSTOM
+  #masterType: standard_gpu
+  runtimeVersion: '1.9'
