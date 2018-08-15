@@ -5,7 +5,7 @@ from absl import app, flags
 from tensorflow.python.keras.utils import multi_gpu_model
 
 from trainer.datasets import load_imdb
-from trainer.model import BaseModel
+from trainer.models import BaseModel
 from trainer.utils import ModelCheckpointToGcs, CSVLoggerToGcs, set_session, get_available_gpus
 
 FLAGS = flags.FLAGS
