@@ -22,3 +22,5 @@ rake -T
 nohup rake tasks:train &
 tail -f nohup.out
 ```
+## Results
+https://gist.github.com/chck/c8dce4201778d78b8b409b135810cb49
