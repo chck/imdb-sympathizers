@@ -41,7 +41,7 @@ ml-local:
 	--epochs $(EPOCHS)
 
 .PHONY: ml-remote ## Train by CloudML on Remote GPU
-ml-gpu:
+ml-remote:
 	gcloud ml-engine jobs submit training $(JOB_NAME) \
 	--module-name trainer.task \
 	--package-path trainer \
