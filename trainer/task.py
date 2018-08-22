@@ -16,7 +16,7 @@ flags.DEFINE_string('optimizer', 'adam', 'String name of optimizer.')
 flags.DEFINE_integer('max_features', 20000, 'Max number of words to include.')
 flags.DEFINE_integer('maxlen', 1000, 'Sequences longer than this will be filtered out.')
 flags.DEFINE_integer('batch_size', 128, 'Number of samples per gradient update.')
-flags.DEFINE_integer('epochs', 4, 'An epoch is an iteration over the entire `x` and `y` data provided.')
+flags.DEFINE_integer('epochs', 10, 'An epoch is an iteration over the entire `x` and `y` data provided.')
 
 
 def main(argv):
